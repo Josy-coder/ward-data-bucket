@@ -1,9 +1,11 @@
 import { NextApiHandler } from 'next'
 import NextAuth from 'next-auth'
-import { PrismaAdapter } from '@auth/prisma-adapter'
+import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { compare } from 'bcrypt'
+import { JWT } from 'next-auth/jwt'
+import { Session } from 'next-auth'
 
 const authHandler: NextApiHandler = NextAuth({
     adapter: PrismaAdapter(prisma),
@@ -56,20 +58,20 @@ const authHandler: NextApiHandler = NextAuth({
         strategy: 'jwt'
     },
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user }: { token: JWT; user?: any }) {
             if (user) {
                 token.role = user.role
                 token.tenantId = user.tenantId
             }
             return token
         },
-        async session({ session, token }) {
+        async session({ session, token }: { session: Session; token: JWT }) {
             if (session?.user) {
                 session.user.role = token.role
                 session.user.tenantId = token.tenantId
             }
             return session
-        }
+        },
     },
     pages: {
         signIn: '/auth/login',

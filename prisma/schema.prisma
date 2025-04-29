@@ -8,79 +8,208 @@ datasource db {
 }
 
 // Geographical Models
-model Region {
-  id        String     @id @default(cuid())
-  name      String
-  code      Int        @unique
-  provinces Province[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+model GeoRegion {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  type       String
+  provinces  Province[]
+  regions    Region[]
+  mkaRegions MkaRegion[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  order      Int         @default(0)
+  level      Int         @default(0)
 }
 
 model Province {
-  id        String     @id @default(cuid())
-  name      String
-  code      Int
-  region    Region     @relation(fields: [regionId], references: [id])
-  regionId  String
-  districts District[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id          String     @id @default(cuid())
+  name        String
+  code        String?
+  geoRegion   GeoRegion  @relation(fields: [geoRegionId], references: [id])
+  geoRegionId String
+  districts   District[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  order       Int        @default(0)
+  path        String     @unique
+  level       Int        @default(1)
 
-  @@unique([code, regionId])
+  @@unique([name, geoRegionId])
+  @@index([path])
 }
 
 model District {
   id         String   @id @default(cuid())
   name       String
-  code       Int
+  code       String?
   province   Province @relation(fields: [provinceId], references: [id])
   provinceId String
   llgs       LLG[]
   tenant     Tenant?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  order      Int      @default(0)
+  path       String   @unique
+  level      Int      @default(2)
 
-  @@unique([code, provinceId])
+  @@unique([name, provinceId])
+  @@index([path])
 }
 
 model LLG {
   id         String   @id @default(cuid())
   name       String
-  code       Int
+  code       String?
   district   District @relation(fields: [districtId], references: [id])
   districtId String
   wards      Ward[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  order      Int      @default(0)
+  path       String   @unique
+  level      Int      @default(3)
 
-  @@unique([code, districtId])
+  @@unique([name, districtId])
+  @@index([path])
 }
 
 model Ward {
   id          String           @id @default(cuid())
   name        String
-  code        Int
+  code        String?
   llg         LLG              @relation(fields: [llgId], references: [id])
   llgId       String
+  villages    String[]
   locations   Location[]
   dataBuckets WardDataBucket[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  order       Int              @default(0)
+  path        String           @unique
+  level       Int              @default(4)
 
-  @@unique([code, llgId])
+  @@unique([name, llgId])
+  @@index([path])
+}
+
+model Region {
+  id          String        @id @default(cuid())
+  name        String
+  code        String?
+  geoRegion   GeoRegion     @relation(fields: [geoRegionId], references: [id])
+  geoRegionId String
+  districts   AbgDistrict[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  order       Int           @default(0)
+  path        String        @unique
+  level       Int           @default(1)
+
+  @@unique([name, geoRegionId])
+  @@index([path])
+}
+
+model AbgDistrict {
+  id             String         @id @default(cuid())
+  name           String
+  code           String?
+  region         Region         @relation(fields: [regionId], references: [id])
+  regionId       String
+  constituencies Constituency[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  order          Int            @default(0)
+  path           String         @unique
+  level          Int            @default(2)
+
+  @@unique([name, regionId])
+  @@index([path])
+}
+
+model Constituency {
+  id         String      @id @default(cuid())
+  name       String
+  code       String?
+  district   AbgDistrict @relation(fields: [districtId], references: [id])
+  districtId String
+  villages   String[]
+  locations  Location[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  order      Int         @default(0)
+  path       String      @unique
+  level      Int         @default(3)
+
+  @@unique([name, districtId])
+  @@index([path])
+}
+
+model MkaRegion {
+  id          String    @id @default(cuid())
+  name        String
+  code        String?
+  geoRegion   GeoRegion @relation(fields: [geoRegionId], references: [id])
+  geoRegionId String
+  wards       MkaWard[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  order       Int       @default(0)
+  path        String    @unique
+  level       Int       @default(1)
+
+  @@unique([name, geoRegionId])
+  @@index([path])
+}
+
+model MkaWard {
+  id        String     @id @default(cuid())
+  name      String
+  code      String?
+  region    MkaRegion  @relation(fields: [regionId], references: [id])
+  regionId  String
+  sections  String[]
+  locations Location[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  order     Int        @default(0)
+  path      String     @unique
+  level     Int        @default(2)
+
+  @@unique([name, regionId])
+  @@index([path])
 }
 
 model Location {
-  id        String   @id @default(cuid())
-  name      String
-  code      Int
-  ward      Ward     @relation(fields: [wardId], references: [id])
-  wardId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String        @id @default(cuid())
+  name           String
+  code           String?
+  ward           Ward?         @relation(fields: [wardId], references: [id])
+  wardId         String?
+  constituency   Constituency? @relation(fields: [constituencyId], references: [id])
+  constituencyId String?
+  mkaWard        MkaWard?      @relation(fields: [mkaWardId], references: [id])
+  mkaWardId      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  order          Int           @default(0)
+  path           String        @unique
+  level          Int
 
-  @@unique([code, wardId])
+  @@index([path])
+}
+
+model NodeMovementHistory {
+  id          String   @id @default(cuid())
+  nodeId      String
+  nodeType    String
+  oldParentId String
+  newParentId String
+  movedAt     DateTime @default(now())
+  movedBy     User     @relation(fields: [userId], references: [id])
+  userId      String
+  oldPath     String
+  newPath     String
+  createdAt   DateTime @default(now())
 }
 
 // Multi-tenancy Models
@@ -97,20 +226,21 @@ model Tenant {
 }
 
 model User {
-  id                String    @id @default(cuid())
-  name              String?
-  email             String    @unique
-  emailVerified     DateTime?
-  password          String
-  role              UserRole  @default(USER)
-  tenant            Tenant    @relation(fields: [tenantId], references: [id])
-  tenantId          String
-  isActive          Boolean   @default(true)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  verificationToken String?   @unique
-  resetToken        String?   @unique
-  resetTokenExpiry  DateTime?
+  id                    String                @id @default(cuid())
+  name                  String?
+  email                 String                @unique
+  emailVerified         DateTime?
+  password              String
+  role                  UserRole              @default(USER)
+  tenant                Tenant?               @relation(fields: [tenantId], references: [id])
+  tenantId              String?
+  isActive              Boolean               @default(true)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  verificationToken     String?               @unique
+  resetToken            String?               @unique
+  resetTokenExpiry      DateTime?
+  nodeMovementHistories NodeMovementHistory[]
 }
 
 // Data Collection Models
@@ -148,6 +278,17 @@ model WardDataBucket {
   @@unique([wardId, dataPeriodId, bucketType])
 }
 
+model DataEntryStatus {
+  id             String    @id @default(cuid())
+  dataYearId     String
+  type           String // "WARD" or "VILLAGE"
+  referenceKeyId String // Ward ID or Village ID
+  dateCompleted  DateTime?
+  isCompleted    Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
 model File {
   id           String         @id @default(cuid())
   tenant       Tenant         @relation(fields: [tenantId], references: [id])
@@ -160,6 +301,29 @@ model File {
   description  String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+}
+
+model DisasterAlert {
+  id                         String    @id @default(cuid())
+  tenantId                   String
+  alertDate                  DateTime
+  alertBy                    String
+  level1Id                   String
+  level2Id                   String?
+  level3Id                   String?
+  level4Id                   String?
+  level5Id                   String?
+  level6Id                   String?
+  location                   String
+  message                    String
+  isFakeNews                 Boolean   @default(false)
+  alertVerifiedDate          DateTime?
+  alertVerifiedBy            String?
+  alertApprovedForPublicDate DateTime?
+  alertApprovedForPublicBy   String?
+  severity                   Int
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
 }
 
 enum UserRole {

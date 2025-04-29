@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { hash } from 'bcrypt'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { sendVerificationEmail } from '@/lib/email'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

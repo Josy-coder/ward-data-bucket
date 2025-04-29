@@ -1,6 +1,5 @@
 import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
 import rateLimit from 'express-rate-limit'
-import { getToken } from 'next-auth/jwt'
 
 // Rate limiting configuration
 const limiter = rateLimit({
