@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Geographical Models
+model Region {
+  id        String     @id @default(cuid())
+  name      String
+  code      Int        @unique
+  provinces Province[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Province {
+  id        String     @id @default(cuid())
+  name      String
+  code      Int
+  region    Region     @relation(fields: [regionId], references: [id])
+  regionId  String
+  districts District[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([code, regionId])
+}
+
+model District {
+  id         String   @id @default(cuid())
+  name       String
+  code       Int
+  province   Province @relation(fields: [provinceId], references: [id])
+  provinceId String
+  llgs       LLG[]
+  tenant     Tenant?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([code, provinceId])
+}
+
+model LLG {
+  id         String   @id @default(cuid())
+  name       String
+  code       Int
+  district   District @relation(fields: [districtId], references: [id])
+  districtId String
+  wards      Ward[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([code, districtId])
+}
+
+model Ward {
+  id          String           @id @default(cuid())
+  name        String
+  code        Int
+  llg         LLG              @relation(fields: [llgId], references: [id])
+  llgId       String
+  locations   Location[]
+  dataBuckets WardDataBucket[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([code, llgId])
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  name      String
+  code      Int
+  ward      Ward     @relation(fields: [wardId], references: [id])
+  wardId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([code, wardId])
+}
+
+// Multi-tenancy Models
+model Tenant {
+  id          String       @id @default(cuid())
+  district    District     @relation(fields: [districtId], references: [id])
+  districtId  String       @unique
+  isActive    Boolean      @default(true)
+  users       User[]
+  dataPeriods DataPeriod[]
+  files       File[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model User {
+  id                String    @id @default(cuid())
+  name              String?
+  email             String    @unique
+  emailVerified     DateTime?
+  password          String
+  role              UserRole  @default(USER)
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+  tenantId          String
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  verificationToken String?   @unique
+  resetToken        String?   @unique
+  resetTokenExpiry  DateTime?
+}
+
+// Data Collection Models
+model DataPeriod {
+  id            String           @id @default(cuid())
+  year          Int
+  tenant        Tenant           @relation(fields: [tenantId], references: [id])
+  tenantId      String
+  status        Status           @default(PENDING)
+  dataBuckets   WardDataBucket[]
+  isCompleted   Boolean          @default(false)
+  dateCompleted DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([year, tenantId])
+}
+
+model WardDataBucket {
+  id            String     @id @default(cuid())
+  ward          Ward       @relation(fields: [wardId], references: [id])
+  wardId        String
+  dataPeriod    DataPeriod @relation(fields: [dataPeriodId], references: [id])
+  dataPeriodId  String
+  bucketType    BucketType
+  data          Json?
+  isCompleted   Boolean    @default(false)
+  dateCompleted DateTime?
+  files         File[]
+  lastModified  DateTime   @updatedAt
+  modifiedBy    String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([wardId, dataPeriodId, bucketType])
+}
+
+model File {
+  id           String         @id @default(cuid())
+  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  tenantId     String
+  dataBucket   WardDataBucket @relation(fields: [dataBucketId], references: [id])
+  dataBucketId String
+  filename     String
+  path         String
+  type         String
+  description  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+enum UserRole {
+  ROOT
+  ADMIN
+  USER
+}
+
+enum Status {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum BucketType {
+  T1 // Population
+  T2 // Agriculture-Cash Crop
+  T3 // Agriculture-Garden Food
+  T4 // Agriculture-Fishing
+  T5 // Agriculture-Livestock
+  T6 // Business
+  T7 // Community Resources
+  T8 // Drinking Water & Sanitation
+  T9 // Transportation
+  T10 // Transportation Roads
+  T11 // Law & Order
+  T12 // Disaster
+  T13 // Village Assembly Resource People
+  T14 // Village Assembly Other Information
+  T15 // Education
+  T16 // Education Secondary/High Schools
+  T17 // Education Other Institutions
+  T18 // Health Center
+  T19 // Health Mobile Health Clinic
+  T20 // Health Family Life Well Being
+}
