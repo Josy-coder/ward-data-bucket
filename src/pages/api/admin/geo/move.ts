@@ -114,59 +114,106 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         // Check for each possible parent type based on the node type
         switch (nodeType) {
             case 'province':
-                parent = await prisma.geoRegion.findUnique({ where: { id: newParentId } });
+                parent = await prisma.geoRegion.findUnique({
+                    where: { id: newParentId },
+                    select: { id: true, name: true }
+                });
                 if (parent) parentType = 'geo_region';
                 break;
             case 'district':
-                parent = await prisma.province.findUnique({ where: { id: newParentId } });
+                parent = await prisma.province.findUnique({
+                    where: { id: newParentId },
+                    select: { id: true, name: true, path: true }
+                });
                 if (parent) parentType = 'province';
                 break;
             case 'llg':
-                parent = await prisma.district.findUnique({ where: { id: newParentId } });
+                parent = await prisma.district.findUnique({
+                    where: { id: newParentId },
+                    select: { id: true, name: true, path: true }
+                });
                 if (parent) parentType = 'district';
                 break;
             case 'ward':
-                parent = await prisma.lLG.findUnique({ where: { id: newParentId } });
+                parent = await prisma.lLG.findUnique({
+                    where: { id: newParentId },
+                    select: { id: true, name: true, path: true }
+                });
                 if (parent) parentType = 'llg';
                 break;
             case 'location':
-                parent = await prisma.ward.findUnique({ where: { id: newParentId } });
+                parent = await prisma.ward.findUnique({
+                    where: { id: newParentId },
+                    select: { id: true, name: true, path: true }
+                });
                 if (parent) parentType = 'ward';
 
                 if (!parent) {
-                    parent = await prisma.constituency.findUnique({ where: { id: newParentId } });
+                    parent = await prisma.constituency.findUnique({
+                        where: { id: newParentId },
+                        select: { id: true, name: true, path: true }
+                    });
                     if (parent) parentType = 'constituency';
                 }
 
                 if (!parent) {
-                    parent = await prisma.mkaWard.findUnique({ where: { id: newParentId } });
+                    parent = await prisma.mkaWard.findUnique({
+                        where: { id: newParentId },
+                        select: { id: true, name: true, path: true }
+                    });
                     if (parent) parentType = 'mka_ward';
                 }
                 break;
             case 'region':
-                parent = await prisma.geoRegion.findUnique({ where: { id: newParentId } });
+                parent = await prisma.geoRegion.findUnique({
+                    where: { id: newParentId },
+                    select: { id: true, name: true }
+                });
                 if (parent) parentType = 'geo_region';
                 break;
             case 'abg_district':
-                parent = await prisma.region.findUnique({ where: { id: newParentId } });
+                parent = await prisma.region.findUnique({
+                    where: { id: newParentId },
+                    select: { id: true, name: true, path: true }
+                });
                 if (parent) parentType = 'region';
                 break;
             case 'constituency':
-                parent = await prisma.abgDistrict.findUnique({ where: { id: newParentId } });
+                parent = await prisma.abgDistrict.findUnique({
+                    where: { id: newParentId },
+                    select: { id: true, name: true, path: true }
+                });
                 if (parent) parentType = 'abg_district';
                 break;
             case 'mka_region':
-                parent = await prisma.geoRegion.findUnique({ where: { id: newParentId } });
+                parent = await prisma.geoRegion.findUnique({
+                    where: { id: newParentId },
+                    select: { id: true, name: true }
+                });
                 if (parent) parentType = 'geo_region';
                 break;
             case 'mka_ward':
-                parent = await prisma.mkaRegion.findUnique({ where: { id: newParentId } });
+                parent = await prisma.mkaRegion.findUnique({
+                    where: { id: newParentId },
+                    select: { id: true, name: true, path: true }
+                });
                 if (parent) parentType = 'mka_region';
                 break;
         }
 
         if (!parent || !parentType) {
             return res.status(404).json({ error: 'New parent node not found or invalid for this node type' });
+        }
+
+        // Handle GeoRegion which doesn't have a path field
+        if (parentType === 'geo_region') {
+            // For GeoRegion, construct a path from its name
+            parent.path = parent.name;
+        }
+
+        // Safety check - ensure we have a path
+        if (!parent.path) {
+            return res.status(500).json({ error: 'Parent path could not be determined' });
         }
 
         // Calculate new path
